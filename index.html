@@ -17,6 +17,7 @@
             --current-bg: var(--bg-light); --current-text: var(--text-dark);
             --border: var(--subtle-bg); --hud-bg: rgba(20, 20, 19, 0.92);
             --hud-text: #faf9f5; --dock-bg: rgba(255, 255, 255, 0.85);
+            --mic-active: #d9534f; /* Red for recording */
         }
 
         @media (prefers-color-scheme: dark) {
@@ -53,7 +54,7 @@
         }
 
         /* The Writing Canvas */
-        #app { display: flex; justify-content: center; height: 100vh; padding: 80px 24px 120px 24px; }
+        #app { display: flex; justify-content: center; height: 100vh; padding: 80px 24px 140px 24px; }
         #main-text {
             width: 100%; max-width: 760px; height: 100%; border: none; outline: none;
             background: transparent; resize: none; overflow-y: auto;
@@ -80,31 +81,58 @@
         .btn:hover { filter: brightness(1.1); }
         .btn-sm { width: 38px; height: 38px; background: var(--border); color: var(--current-text); opacity: 0.7; }
         .btn-sm:hover { opacity: 1; }
-        .btn-mic { width: 56px; height: 56px; background: var(--accent-orange); margin: 0 8px; }
+        .btn-mic { 
+            width: 56px; height: 56px; background: var(--accent-orange); margin: 0 8px; 
+            transition: background-color 0.3s ease, transform 0.15s ease;
+        }
         .btn-copy:hover { color: var(--accent-blue); }
         .btn-speak:hover { color: var(--accent-green); }
         .btn-archive:hover { color: var(--accent-purple); }
 
-        @keyframes pulse-orange {
-            0% { box-shadow: 0 0 0 0 rgba(217,119,87,0.6); }
-            70% { box-shadow: 0 0 0 16px rgba(217,119,87,0); }
-            100% { box-shadow: 0 0 0 0 rgba(217,119,87,0); }
+        /* Mic Live State */
+        .btn-mic.mic-live { 
+            background: var(--mic-active);
+            animation: pulse-red 1.2s infinite; 
         }
-        .mic-live { animation: pulse-orange 1.2s infinite; }
+        
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(217,83,79,0.6); }
+            70% { box-shadow: 0 0 0 16px rgba(217,83,79,0); }
+            100% { box-shadow: 0 0 0 0 rgba(217,83,79,0); }
+        }
 
-        /* Live Interim HUD */
+        /* Live Interim HUD (The Black Field) */
         #live-hud {
-            position: fixed; bottom: 110px; left: 50%; transform: translateX(-50%) translateY(10px);
-            background: var(--hud-bg); color: var(--hud-text); padding: 10px 20px; border-radius: 999px;
-            font-family: 'Poppins', sans-serif; font-size: 0.85rem; font-weight: 500; max-width: 80vw;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.18); opacity: 0; pointer-events: none;
-            transition: opacity 0.2s ease, transform 0.2s ease; z-index: 105;
+            position: fixed; 
+            bottom: 130px; /* Moved higher as requested */
+            left: 50%; 
+            transform: translateX(-50%) translateY(10px);
+            background: var(--hud-bg); 
+            color: var(--hud-text); 
+            padding: 16px 24px; 
+            border-radius: 24px;
+            font-family: 'Poppins', sans-serif; 
+            font-size: 0.95rem; 
+            font-weight: 500; 
+            width: calc(100% - 48px);
+            max-width: 760px; /* Aligns with text area */
+            text-align: left; /* Left-aligned like a caption */
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2); 
+            opacity: 0; 
+            pointer-events: none;
+            transition: opacity 0.2s ease, transform 0.2s ease; 
+            z-index: 105;
+            display: flex;
+            align-items: center;
         }
         #live-hud.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
         #live-hud .hud-dot {
-            display: inline-block; width: 8px; height: 8px; background: var(--accent-orange);
-            border-radius: 50%; margin-right: 10px; vertical-align: middle;
+            display: inline-block; width: 10px; height: 10px; background: var(--accent-orange);
+            border-radius: 50%; margin-right: 12px; vertical-align: middle;
+            flex-shrink: 0;
         }
 
         /* Drawers */
@@ -150,12 +178,13 @@
         .history-item .snippet { font-size: 0.85rem; opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
         @media (max-width: 768px) {
-            #app { padding: 60px 16px 120px 16px; }
+            #app { padding: 60px 16px 140px 16px; }
             #top-bar { padding: 0 16px; }
             #control-dock { gap: 8px; padding: 8px 12px; }
             .btn-sm { width: 36px; height: 36px; }
             .btn-mic { width: 48px; height: 48px; }
             .drawer { width: 100%; }
+            #live-hud { bottom: 120px; font-size: 0.85rem; padding: 12px 16px; }
         }
     </style>
 </head>
@@ -176,7 +205,10 @@
     <textarea id="main-text" placeholder="Tap the orange mic or start typing..."></textarea>
 </div>
 
-<div id="live-hud"><span class="hud-dot"></span><span id="hud-text">Listening...</span></div>
+<div id="live-hud">
+    <span class="hud-dot"></span>
+    <span id="hud-text" style="overflow: hidden; text-overflow: ellipsis;">Listening...</span>
+</div>
 
 <div id="control-dock">
     <button id="archive-btn" class="btn btn-sm btn-archive" title="Archive & Clear">
@@ -185,12 +217,22 @@
     <button id="copy-btn" class="btn btn-sm btn-copy" title="Copy to Clipboard">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
     </button>
+    
+    <!-- Mic Button -->
     <button id="mic-btn" class="btn btn-mic" title="Toggle Voice Dictation (Alt+M)">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+        <!-- Default Mic Icon -->
+        <svg id="mic-icon-svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" x2="12" y1="19" y2="22"/>
+        </svg>
     </button>
+
+    <!-- TTS Read Aloud Button -->
     <button id="speak-btn" class="btn btn-sm btn-speak" title="Read Aloud (Alt+P) — Reads selection or full text">
         <svg id="speak-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
     </button>
+    
     <button id="clear-btn" class="btn btn-sm btn-clear" title="Clear Draft">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
     </button>
@@ -246,6 +288,7 @@
     const speakBtn = document.getElementById('speak-btn');
     const speakIcon = document.getElementById('speak-icon');
     const micBtn = document.getElementById('mic-btn');
+    const micIconSvg = document.getElementById('mic-icon-svg');
     const syncStatus = document.getElementById('sync-status');
     const voiceSelect = document.getElementById('voice-select');
     const micLangSelect = document.getElementById('mic-lang-select');
@@ -256,9 +299,12 @@
     const liveHud = document.getElementById('live-hud');
     const hudText = document.getElementById('hud-text');
 
+    // Icons
     const ICONS = {
         PLAY: `<polygon points="5 3 19 12 5 21 5 3"></polygon>`,
-        PAUSE: `<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>`
+        STOP_TTS: `<rect x="6" y="6" width="12" height="12" rx="2"></rect>`,
+        MIC: `<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/>`,
+        STOP_REC: `<rect x="7" y="7" width="10" height="10" rx="2"></rect>` // Square for stopping recording
     };
 
     function updateStats() {
@@ -278,11 +324,10 @@
     const synth = window.speechSynthesis;
     let voices = [];
     
-    // Robust TTS State Tracking
     let isTtsSpeaking = false;
     let isTtsPaused = false;
     let ttsKeepAliveTimer = null;
-    let currentlyPlayingText = ''; // Track what is actually playing
+    let currentlyPlayingText = ''; 
 
     function loadVoices() {
         voices = synth.getVoices();
@@ -306,7 +351,6 @@
         if (!textToRead) return;
         
         currentlyPlayingText = textToRead;
-
         const utt = new SpeechSynthesisUtterance(textToRead);
         utt.voice = voices[voiceSelect.value] || null;
         utt.rate = parseFloat(speedRange.value);
@@ -314,7 +358,7 @@
         utt.onstart = () => {
             isTtsSpeaking = true;
             isTtsPaused = false;
-            speakIcon.innerHTML = ICONS.PAUSE;
+            speakIcon.innerHTML = ICONS.STOP_TTS;
             
             clearInterval(ttsKeepAliveTimer);
             ttsKeepAliveTimer = setInterval(() => {
@@ -330,7 +374,6 @@
     }
 
     speakBtn.addEventListener('click', () => {
-        // Get current text (Highlighted or full document)
         const selStart = tx.selectionStart;
         const selEnd = tx.selectionEnd;
         const selectedText = (selStart !== selEnd) ? tx.value.substring(selStart, selEnd).trim() : '';
@@ -338,28 +381,23 @@
 
         if (isTtsSpeaking) {
             if (!isTtsPaused) {
-                // --- ACTION: PAUSE ---
                 synth.pause();
                 isTtsPaused = true;
                 speakIcon.innerHTML = ICONS.PLAY;
             } else {
-                // --- ACTION: RESUME or RESTART ---
-                // If the user changed their selection while paused, do a full stop and read the new text.
                 if (currentSelection !== currentlyPlayingText) {
-                    synth.cancel(); // Kill the old queue
+                    synth.cancel(); 
                     resetSpeakUI();
-                    startTts(currentSelection); // Start fresh
+                    startTts(currentSelection); 
                 } else {
-                    // Resume the same text
                     synth.resume();
                     isTtsPaused = false;
-                    speakIcon.innerHTML = ICONS.PAUSE;
+                    speakIcon.innerHTML = ICONS.STOP_TTS;
                 }
             }
             return;
         }
 
-        // --- ACTION: START FRESH ---
         synth.cancel(); 
         startTts(currentSelection);
     });
@@ -434,7 +472,10 @@
         recognition.lang = micLangSelect.value;
         micActive = true;
         try { recognition.start(); } catch (e) {}
+        
+        // UI Updates for Mic On
         micBtn.classList.add('mic-live');
+        micIconSvg.innerHTML = ICONS.STOP_REC; // Change to Stop Square
         hudText.textContent = 'Listening...';
         liveHud.classList.add('visible');
         tx.focus();
@@ -443,7 +484,10 @@
     function stopMic() {
         micActive = false;
         if (recognition) try { recognition.stop(); } catch (e) {}
+        
+        // UI Updates for Mic Off
         micBtn.classList.remove('mic-live');
+        micIconSvg.innerHTML = ICONS.MIC; // Change back to Mic
         liveHud.classList.remove('visible');
     }
 
