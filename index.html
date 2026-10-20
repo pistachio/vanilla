@@ -156,7 +156,7 @@
         if (!text) return '';
 
         const needsLeadingSpace = precedingChar && !/[\s\n"(-]/.test(precedingChar) && !/^[.,?!:;\n]/.test(text);
-        const shouldCapitalize  = !precedingChar || /[.?!\n]\s*$/.test(precedingChar) \vert{}\vert{} /-\s*$/.test(precedingChar);
+const shouldCapitalize  = !precedingChar || /[.?!\n]\s*$/.test(precedingChar) || /-\s*$/.test(precedingChar);
 
         if (shouldCapitalize && /^[a-z]/.test(text)) {
             text = text.charAt(0).toUpperCase() + text.slice(1);
