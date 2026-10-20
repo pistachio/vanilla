@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vanilla Text | Voice Brainstorm & Scratchpad</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Poppins:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --text-dark: #141413;
+            --text-light: #faf9f5;
+            --bg-light: #faf9f5;
+            --bg-dark: #141413;
+            --secondary: #8e8c84;
+            --subtle-bg: #e8e6dc;
+            --accent-orange: #d97757;
+            --accent-blue: #6a9bcc;
+            --accent-green: #788c5d;
+            --accent-purple: #8c6d9c;
+
+            --current-bg: var(--bg-light);
+            --current-text: var(--text-dark);
+            --container-bg: #ffffff;
+            --border: var(--subtle-bg);
+            --hud-bg: rgba(20, 20, 19, 0.92);
+            --hud-text: #faf9f5;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --current-bg: var(--bg-dark);
+                --current-text: var(--text-light);
+                --container-bg: #1c1c1b;
+                --border: #2d2d2b;
+                --hud-bg: rgba(250, 249, 245, 0.94);
+                --hud-text: #141413;
+            }
+        }
+
+        /* ── Layout Shell ─────────────────────────────────── */
+        html, body {
+            height: 100%;
+            background-color: var(--current-bg);
+            font-family: 'Lora', Georgia, serif;
+            color: var(--current-text);
+            font-size: 16px;
+        }
+
+        #app {
+            display: flex;
+            justify-content: center;
+            padding: 40px 104px 120px 24px;
+            min-height: 100vh;
+        }
+
+        /* ── Textarea Container ────────────────────────────── */
+        #editor-shell {
+            background: var(--container-bg);
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 24px rgba(0,0,0,0.04);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 860px;
+            min-height: calc(100vh - 160px);
+            display: flex;
+            flex-direction: column;
+            transition: border-color 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        #editor-shell.recording-border {
+            border-color: var(--accent-orange);
+            box-shadow: 0 0 0 3px rgba(217, 119, 87, 0.15);
+        }
+
+        #main-text {
+            display: block;
+            width: 100%;
+            flex: 1;
+            border: none;
+            outline: none;
+            background: transparent;
+            resize: none;
+            overflow: hidden;
+            font-size: 1.25rem;
+            line-height: 1.75;
+            padding: 40px;
+            color: var(--current-text);
+            font-family: 'Lora', Georgia, serif;
+            min-height: 400px;
+        }
+
+        #main-text::placeholder {
+            color: var(--secondary);
+            opacity: 0.5;
+        }
+
+        /* ── Live Speech Interim HUD ───────────────────────── */
+        #live-hud {
+            position: fixed;
+            bottom: 84px;
+            left: 50%;
+            transform: translateX(-50%) translateY(10px);
+            background: var(--hud-bg);
+            color: var(--hud-text);
+            padding: 10px 20px;
+            border-radius: 999px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 500;
+            max-width: 85vw;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            z-index: 105;
+        }
+
+        #live-hud.visible {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        #live-hud .hud-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: var(--accent-orange);
+            border-radius: 50%;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+
+        /* ── Fixed Right Control Pod ───────────────────────── */
+        #control-pod {
+            position: fixed;
+            right: 24px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 100;
+        }
+
+        /* ── Fixed Bottom Footer ───────────────────────────── */
+        #footer-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 64px;
+            background: var(--current-bg);
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 36px;
+            z-index: 99;
+        }
+
+        #footer-left, #footer-right {
+            display: flex;
+            gap: 24px;
+            align-items: center;
+        }
+
+        .stats-badge {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 500;
+            font-size: 0.7rem;
+            letter-spacing: 0.04em;
+            color: var(--secondary);
+        }
+
+        /* ── Drawers (slide up from footer) ─────────────────── */
+        .drawer {
+            position: fixed;
+            bottom: 64px;
+            left: 0;
+            right: 0;
+            background: var(--container-bg);
+            border-top: 1px solid var(--border);
+            box-shadow: 0 -8px 24px rgba(0,0,0,0.06);
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 98;
+        }
+
+        .drawer.open {
+            max-height: 320px;
+            overflow-y: auto;
+        }
+
+        .drawer-inner {
+            padding: 24px 36px;
+            max-width: 960px;
+            margin: 0 auto;
+        }
+
+        /* ── Buttons ─────────────────────────────────────────── */
+        .btn {
+            color: #fff;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.12s ease, filter 0.2s, box-shadow 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .btn:active { transform: scale(0.92); }
+        .btn:hover { filter: brightness(1.08); }
+
+        .btn-mic      { background: var(--accent-orange); width: 54px; height: 54px; }
+        .btn-speak    { background: var(--accent-green); }
+        .btn-copy     { background: var(--accent-blue); }
+        .btn-archive  { background: var(--accent-purple); }
+        .btn-download { background: #5a6b7c; }
+        .btn-clear    { background: var(--secondary); opacity: 0.85; }
+
+        .toggle-btn {
+            cursor: pointer;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 700;
+            font-size: 0.7rem;
+            letter-spacing: 0.06em;
+            color: var(--secondary);
+            transition: color 0.2s;
+            background: none;
+            border: none;
+            padding: 6px 0;
+        }
+        .toggle-btn:hover, .toggle-btn.active { color: var(--accent-orange); }
+
+        /* ── Animations ──────────────────────────────────────── */
+        @keyframes pulse-green {
+            0%   { box-shadow: 0 0 0 0   rgba(120,140,93,0.55); }
+            70%  { box-shadow: 0 0 0 14px rgba(120,140,93,0); }
+            100% { box-shadow: 0 0 0 0   rgba(120,140,93,0); }
+        }
+        @keyframes pulse-orange {
+            0%   { box-shadow: 0 0 0 0   rgba(217,119,87,0.6); }
+            70%  { box-shadow: 0 0 0 16px rgba(217,119,87,0); }
+            100% { box-shadow: 0 0 0 0   rgba(217,119,87,0); }
+        }
+
+        .speaking { animation: pulse-green  1.8s infinite; }
+        .mic-live { animation: pulse-orange 1.2s infinite; }
+        .paused   { filter: grayscale(0.45) contrast(1.15); }
+
+        /* ── Settings Grid ───────────────────────────────────── */
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 24px;
+        }
+
+        .settings-grid label {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 700;
+            font-size: 0.65rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--secondary);
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .settings-grid select,
+        .settings-grid input[type="range"],
+        .settings-grid input[type="text"] {
+            width: 100%;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid var(--border);
+            outline: none;
+            color: var(--current-text);
+            font-size: 0.85rem;
+            padding: 4px 0 6px;
+            accent-color: var(--accent-orange);
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .settings-grid select option {
+            background: var(--container-bg);
+            color: var(--current-text);
+        }
+
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding-top: 6px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+
+        .checkbox-row input {
+            accent-color: var(--accent-orange);
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        /* ── History List ─────────────────────────────────────── */
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .history-label {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 700;
+            font-size: 0.65rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--secondary);
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 4px;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .history-item:hover { background: rgba(128,128,128,0.06); }
+
+        .history-item .time-tag {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 700;
+            font-size: 0.62rem;
+            color: var(--accent-blue);
+            flex-shrink: 0;
+            width: 115px;
+        }
+
+        .history-item .snippet {
+            font-size: 0.88rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            opacity: 0.8;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .history-delete {
+            background: none;
+            border: none;
+            color: var(--secondary);
+            cursor: pointer;
+            font-size: 0.8rem;
+            padding: 4px 8px;
+        }
+        .history-delete:hover { color: var(--accent-orange); }
+
+        /* ── Status Toast ─────────────────────────────────────── */
+        #sync-status {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 700;
+            font-size: 0.65rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--accent-green);
+            opacity: 0;
+            transition: opacity 0.25s;
+        }
+
+        /* ── Mobile Ergonomics ────────────────────────────────── */
+        @media (max-width: 768px) {
+            #app {
+                padding: 16px 12px 140px 12px;
+            }
+            #main-text {
+                padding: 24px 20px;
+                font-size: 1.12rem;
+            }
+            #control-pod {
+                top: auto;
+                bottom: 76px;
+                right: 50%;
+                transform: translateX(50%);
+                flex-direction: row;
+                background: var(--container-bg);
+                padding: 8px 14px;
+                border-radius: 999px;
+                border: 1px solid var(--border);
+                box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+            }
+            .btn, .btn-mic {
+                width: 44px;
+                height: 44px;
+            }
+            #live-hud {
+                bottom: 144px;
+            }
+            #footer-bar {
+                padding: 0 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div id="editor-shell">
+        <textarea id="main-text" placeholder="Tap the orange mic (or press Alt+M) and start speaking…"></textarea>
+    </div>
+</div>
+
+<!-- ── Live Interim Dictation HUD ── -->
+<div id="live-hud"><span class="hud-dot"></span><span id="hud-text">Listening...</span></div>
+
+<!-- ── Fixed Right Control Pod ── -->
+<div id="control-pod">
+    <!-- Dictate / Mic -->
+    <button id="mic-btn" class="btn btn-mic" title="Toggle Voice Dictation (Alt+M)">
+        <svg id="mic-icon" width="22" height="22" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" x2="12" y1="19" y2="22"/>
+        </svg>
+    </button>
+
+    <!-- Read Aloud / TTS -->
+    <button id="speak-btn" class="btn btn-speak" title="Play / Pause Read Aloud (Alt+P — reads selection or full text)">
+        <svg id="speak-icon" width="20" height="20" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+        </svg>
+    </button>
+
+    <!-- Copy to Clipboard (Keeps text on screen) -->
+    <button id="copy-btn" class="btn btn-copy" title="Copy to Clipboard (keeps text on screen)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+            <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+        </svg>
+    </button>
+
+    <!-- Smart Archive & Clear -->
+    <button id="archive-btn" class="btn btn-archive" title="Copy, Archive to History & Clear Sheet">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="21 8 21 21 3 21 3 8"/>
+            <rect x="1" y="3" width="22" height="5"/>
+            <line x1="10" y1="12" x2="14" y2="12"/>
+        </svg>
+    </button>
+
+    <!-- Download as File (.md / .txt) -->
+    <button id="download-btn" class="btn btn-download" title="Download Note (.md)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+    </button>
+
+    <!-- Clear Draft -->
+    <button id="clear-btn" class="btn btn-clear" title="Discard Draft">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+        </svg>
+    </button>
+</div>
+
+<!-- ── Fixed Footer Bar ── -->
+<div id="footer-bar">
+    <div id="footer-left">
+        <button class="toggle-btn" id="toggle-settings" onclick="toggleDrawer('settings-drawer', this)">SETTINGS</button>
+        <button class="toggle-btn" id="toggle-history"  onclick="toggleDrawer('history-drawer', this)">ARCHIVE</button>
+        <button class="toggle-btn" id="webhook-btn" style="display:none;" onclick="sendWebhook()">SEND WEBHOOK</button>
+        <span id="sync-status">Saved</span>
+    </div>
+    <div id="footer-right">
+        <span class="stats-badge" id="word-count">0 words · 0 chars</span>
+    </div>
+</div>
+
+<!-- ── Settings Drawer ── -->
+<div id="settings-drawer" class="drawer">
+    <div class="drawer-inner">
+        <div class="settings-grid">
+            <div>
+                <label>Dictation Language</label>
+                <select id="mic-lang-select">
+                    <option value="en-US">English (US)</option>
+                    <option value="en-GB">English (UK)</option>
+                    <option value="de-DE">Deutsch (DE)</option>
+                    <option value="fr-FR">Français (FR)</option>
+                    <option value="es-ES">Español (ES)</option>
+                </select>
+            </div>
+            <div>
+                <label>Spoken Commands</label>
+                <label class="checkbox-row">
+                    <input type="checkbox" id="voice-commands-toggle" checked>
+                    <span>Parse "new line", "bullet point", punctuation</span>
+                </label>
+            </div>
+            <div>
+                <label>Read-Aloud Voice</label>
+                <select id="voice-select"></select>
+            </div>
+            <div>
+                <label>Playback Speed: <span id="speed-display">1.0</span>x</label>
+                <input type="range" id="speed-range" min="0.5" max="2.0" step="0.1" value="1.0">
+            </div>
+            <div>
+                <label>Optional Webhook URL (POST JSON)</label>
+                <input type="text" id="webhook-url" placeholder="https://your-server.com/webhook/...">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── History Drawer ── -->
+<div id="history-drawer" class="drawer">
+    <div class="drawer-inner">
+        <div class="history-header">
+            <span class="history-label">Recent Archives (Max 50 — Click to Append/Restore)</span>
+        </div>
+        <div id="history-list"></div>
+    </div>
+</div>
+
+<script>
+    /* ═══════════════════════════════════════════════
+       DOM & STATE
+    ═══════════════════════════════════════════════ */
+    const tx                  = document.getElementById('main-text');
+    const editorShell         = document.getElementById('editor-shell');
+    const speakBtn            = document.getElementById('speak-btn');
+    const speakIcon           = document.getElementById('speak-icon');
+    const micBtn              = document.getElementById('mic-btn');
+    const syncStatus          = document.getElementById('sync-status');
+    const voiceSelect         = document.getElementById('voice-select');
+    const micLangSelect       = document.getElementById('mic-lang-select');
+    const voiceCommandsToggle = document.getElementById('voice-commands-toggle');
+    const speedRange          = document.getElementById('speed-range');
+    const speedDisplay        = document.getElementById('speed-display');
+    const wordCountEl         = document.getElementById('word-count');
+    const liveHud             = document.getElementById('live-hud');
+    const hudText             = document.getElementById('hud-text');
+    const webhookInput        = document.getElementById('webhook-url');
+    const webhookBtn          = document.getElementById('webhook-btn');
+
+    const ICONS = {
+        PLAY:  `<polygon points="5 3 19 12 5 21 5 3"></polygon>`,
+        PAUSE: `<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>`
+    };
+
+    function autoResize() {
+        const scrollPos = window.scrollY;
+        tx.style.height = 'auto';
+        tx.style.height = Math.max(400, tx.scrollHeight) + 'px';
+        window.scrollTo(0, scrollPos);
+        updateStats();
+    }
+
+    function updateStats() {
+        const text = tx.value.trim();
+        const words = text ? text.split(/\s+/).length : 0;
+        const chars = tx.value.length;
+        wordCountEl.textContent = `${words} word${words === 1 ? '' : 's'} · ${chars} chars`;
+    }
+
+    function notify(msg = 'Saved') {
+        syncStatus.textContent = msg;
+        syncStatus.style.opacity = '1';
+        clearTimeout( window._syncTimer );
+        window._syncTimer = setTimeout(() => syncStatus.style.opacity = '0', 1600);
+    }
+
+    /* ═══════════════════════════════════════════════
+       SPEECH SYNTHESIS (Read Aloud)
+    ═══════════════════════════════════════════════ */
+    const synth = window.speechSynthesis;
+    let voices = [];
+    let ttsKeepAliveTimer = null;
+
+    function loadVoices() {
+        voices = synth.getVoices();
+        if (!voices.length) return;
+        voiceSelect.innerHTML = voices
+            .map((v, i) => `<option value="${i}">${v.name} (${v.lang})</option>`)
+            .join('');
+        const saved = localStorage.getItem('vt_voice_idx');
+        if (saved !== null && voices[saved]) voiceSelect.value = saved;
+    }
+
+    if (speechSynthesis.onvoiceschanged !== undefined) {
+        speechSynthesis.onvoiceschanged = loadVoices;
+    }
+    loadVoices();
+
+    function resetSpeakUI() {
+        clearInterval(ttsKeepAliveTimer);
+        speakBtn.classList.remove('speaking', 'paused');
+        speakIcon.innerHTML = ICONS.PLAY;
+    }
+
+    speakBtn.addEventListener('click', () => {
+        if (synth.speaking && !synth.paused) {
+            synth.pause();
+            speakBtn.classList.add('paused');
+            speakBtn.classList.remove('speaking');
+            speakIcon.innerHTML = ICONS.PLAY;
+        } else if (synth.paused) {
+            synth.resume();
+            speakBtn.classList.remove('paused');
+            speakBtn.classList.add('speaking');
+            speakIcon.innerHTML = ICONS.PAUSE;
+        } else {
+            synth.cancel();
+            // Accurate textarea selection detection
+            const selStart = tx.selectionStart;
+            const selEnd   = tx.selectionEnd;
+            const selectedText = (selStart !== selEnd) ? tx.value.substring(selStart, selEnd).trim() : '';
+            const textToRead = selectedText.length > 0 ? selectedText : tx.value.trim();
+
+            if (!textToRead) return;
+
+            const utt = new SpeechSynthesisUtterance(textToRead);
+            utt.voice = voices[voiceSelect.value] || null;
+            utt.rate  = parseFloat(speedRange.value);
+
+            utt.onstart = () => {
+                speakBtn.classList.add('speaking');
+                speakIcon.innerHTML = ICONS.PAUSE;
+                // Workaround for Chrome cutting off long TTS after 15 seconds
+                ttsKeepAliveTimer = setInterval(() => {
+                    if (synth.speaking && !synth.paused) {
+                        synth.pause();
+                        synth.resume();
+                    }
+                }, 10000);
+            };
+
+            utt.onend = utt.onerror = resetSpeakUI;
+            synth.speak(utt);
+        }
+    });
+
+    /* ═══════════════════════════════════════════════
+       VOICE INPUT (Continuous + Interim HUD + Commands)
+    ═══════════════════════════════════════════════ */
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition = null;
+    let micActive   = false;
+    let wakeLock    = null;
+
+    function formatSpokenText(raw, precedingChar) {
+        let text = raw;
+
+        if (voiceCommandsToggle.checked) {
+            const replacements = [
+                [/\bnew paragraph\b/gi, '\n\n'],
+                [/\bnext paragraph\b/gi, '\n\n'],
+                [/\bnew line\b/gi, '\n'],
+                [/\bnext line\b/gi, '\n'],
+                [/\bbullet point\b/gi, '\n- '],
+                [/\bfull stop\b/gi, '.'],
+                [/\bperiod\b/gi, '.'],
+                [/\bcomma\b/gi, ','],
+                [/\bquestion mark\b/gi, '?'],
+                [/\bexclamation mark\b/gi, '!'],
+                [/\bexclamation point\b/gi, '!'],
+                [/\bcolon\b/gi, ':'],
+                [/\bsemicolon\b/gi, ';'],
+                [/\bopen quote\b/gi, '"'],
+                [/\bclose quote\b/gi, '"']
+            ];
+            for (const [regex, rep] of replacements) {
+                text = text.replace(regex, rep);
+            }
+        }
+
+        // Clean up spaces before punctuation
+        text = text.replace(/\s+([.,?!:;])/g, '$1');
+        text = text.trim();
+        if (!text) return '';
+
+        // Smart spacing & capitalization relative to preceding text
+        const needsLeadingSpace = precedingChar && !/[\s\n"(-]/.test(precedingChar) && !/^[.,?!:;\n]/.test(text);
+        const shouldCapitalize  = !precedingChar || /[.?!\n]\s*$/.test(precedingChar) \vert{}\vert{} /-\s*$/.test(precedingChar);
+
+        if (shouldCapitalize && /^[a-z]/.test(text)) {
+            text = text.charAt(0).toUpperCase() + text.slice(1);
+        }
+
+        // Auto-capitalize after internal newlines or periods
+        text = text.replace(/([.?!\n]\s+)([a-z])/g, (m, p1, p2) => p1 + p2.toUpperCase());
+
+        const trailingSpace = /\n$/.test(text) ? '' : ' ';
+        return (needsLeadingSpace ? ' ' : '') + text + trailingSpace;
+    }
+
+    function insertAtCursor(str) {
+        const start  = tx.selectionStart;
+        const end    = tx.selectionEnd;
+        const before = tx.value.substring(0, start);
+        const after  = tx.value.substring(end);
+
+        const formatted = formatSpokenText(str, before.slice(-2));
+        if (!formatted) return;
+
+        tx.value = before + formatted + after;
+        const newPos = before.length + formatted.length;
+        tx.setSelectionRange(newPos, newPos);
+        tx.dispatchEvent(new Event('input'));
+    }
+
+    if (SpeechRecognition) {
+        recognition = new SpeechRecognition();
+        recognition.continuous     = true;
+        recognition.interimResults = true;
+        recognition.lang           = localStorage.getItem('vt_mic_lang') || 'en-US';
+
+        recognition.onresult = (e) => {
+            let finalChunk   = '';
+            let interimChunk = '';
+
+            for (let i = e.resultIndex; i < e.results.length; i++) {
+                const tr = e.results[i][0].transcript;
+                if (e.results[i].isFinal) {
+                    finalChunk += tr + ' ';
+                } else {
+                    interimChunk += tr;
+                }
+            }
+
+            if (interimChunk.trim()) {
+                hudText.textContent = interimChunk.trim();
+                liveHud.classList.add('visible');
+            } else {
+                hudText.textContent = 'Listening...';
+            }
+
+            if (finalChunk.trim()) {
+                insertAtCursor(finalChunk);
+                hudText.textContent = 'Listening...';
+            }
+        };
+
+        recognition.onerror = (e) => {
+            if (e.error === 'no-speech') return;
+            console.warn('SpeechRecognition error:', e.error);
+            if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+                stopMic();
+                alert('Microphone permission denied. Ensure you are accessing this page over HTTPS or localhost.');
+            }
+        };
+
+        recognition.onend = () => {
+            if (micActive) {
+                try { recognition.start(); } catch (err) {}
+            }
+        };
+    }
+
+    async function requestWakeLock() {
+        if ('wakeLock' in navigator) {
+            try { wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
+        }
+    }
+
+    function releaseWakeLock() {
+        if (wakeLock) {
+            wakeLock.release().catch(() => {});
+            wakeLock = null;
+        }
+    }
+
+    function startMic() {
+        if (!recognition) {
+            alert('Speech recognition is not supported in this browser. Use Chrome, Edge, or Safari.');
+            return;
+        }
+        // Stop TTS if speaking
+        if (synth.speaking) { synth.cancel(); resetSpeakUI(); }
+
+        recognition.lang = micLangSelect.value;
+        micActive = true;
+        try { recognition.start(); } catch (e) {}
+        micBtn.classList.add('mic-live');
+        editorShell.classList.add('recording-border');
+        hudText.textContent = 'Listening...';
+        liveHud.classList.add('visible');
+        requestWakeLock();
+        tx.focus();
+    }
+
+    function stopMic() {
+        micActive = false;
+        if (recognition) {
+            try { recognition.stop(); } catch (e) {}
+        }
+        micBtn.classList.remove('mic-live');
+        editorShell.classList.remove('recording-border');
+        liveHud.classList.remove('visible');
+        releaseWakeLock();
+    }
+
+    micBtn.addEventListener('click', () => micActive ? stopMic() : startMic());
+
+    /* ═══════════════════════════════════════════════
+       ACTIONS: COPY, ARCHIVE, DOWNLOAD, WEBHOOK, CLEAR
+    ═══════════════════════════════════════════════ */
+    function saveToHistory(text) {
+        if (!text) return;
+        const history = JSON.parse(localStorage.getItem('vt_history') || '[]');
+        const timestamp = new Date().toLocaleString([], { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+        history.unshift({ text, date: timestamp });
+        localStorage.setItem('vt_history', JSON.stringify(history.slice(0, 50)));
+    }
+
+    // Standard Copy (keeps text in editor)
+    document.getElementById('copy-btn').addEventListener('click', () => {
+        const text = tx.value.trim();
+        if (!text) return;
+        navigator.clipboard.writeText(text).then(() => notify('Copied to Clipboard'));
+    });
+
+    // Smart Archive (Copies + Saves to Archive + Clears screen for next note)
+    document.getElementById('archive-btn').addEventListener('click', () => {
+        const text = tx.value.trim();
+        if (!text) return;
+        navigator.clipboard.writeText(text).catch(() => {});
+        saveToHistory(text);
+        tx.value = '';
+        autoResize();
+        localStorage.setItem('vt_draft', '');
+        if (document.getElementById('history-drawer').classList.contains('open')) renderHistory();
+        notify('Copied & Archived');
+    });
+
+    // Download as Markdown file
+    document.getElementById('download-btn').addEventListener('click', () => {
+        const text = tx.value.trim();
+        if (!text) return;
+        const dateStr = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+        const blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `note-${dateStr}.md`;
+        a.click();
+        URL.revokeObjectURL(url);
+        notify('Downloaded .md');
+    });
+
+    // Clear Draft
+    document.getElementById('clear-btn').addEventListener('click', () => {
+        const text = tx.value.trim();
+        if (!text) return;
+        if (confirm('Discard current draft? (Tip: Use the purple Archive button to save it first)')) {
+            tx.value = '';
+            autoResize();
+            localStorage.setItem('vt_draft', '');
+            notify('Cleared');
+        }
+    });
+
+    // Optional Webhook Push
+    async function sendWebhook() {
+        const url = webhookInput.value.trim();
+        const text = tx.value.trim();
+        if (!url || !text) return;
+        try {
+            notify('Sending...');
+            await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text, timestamp: new Date().toISOString() })
+            });
+            notify('Sent to Webhook');
+        } catch (err) {
+            alert('Webhook failed: ' + err.message);
+        }
+    }
+
+    /* ═══════════════════════════════════════════════
+       DRAWERS & HISTORY MANAGEMENT
+    ═══════════════════════════════════════════════ */
+    function toggleDrawer(id, btn) {
+        const target = document.getElementById(id);
+        const isOpen = target.classList.contains('open');
+
+        document.querySelectorAll('.drawer').forEach(d => d.classList.remove('open'));
+        document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+
+        if (!isOpen) {
+            target.classList.add('open');
+            if (btn) btn.classList.add('active');
+            if (id === 'history-drawer') renderHistory();
+        }
+    }
+
+    function renderHistory() {
+        const history = JSON.parse(localStorage.getItem('vt_history') || '[]');
+        const list = document.getElementById('history-list');
+
+        if (!history.length) {
+            list.innerHTML = '<div style="font-size:0.8rem;opacity:0.45;padding:8px 0;">No archived notes yet.</div>';
+            return;
+        }
+
+        list.innerHTML = history.map((item, idx) => `
+            <div class="history-item">
+                <span class="time-tag" onclick="restoreDraft(${idx})">${item.date}</span>
+                <span class="snippet" onclick="restoreDraft(${idx})">${escapeHtml(item.text)}</span>
+                <button class="history-delete" title="Delete entry" onclick="deleteHistoryItem(event, ${idx})">✕</button>
+            </div>
+        `).join('');
+    }
+
+    function escapeHtml(str) {
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    window.restoreDraft = (idx) => {
+        const history = JSON.parse(localStorage.getItem('vt_history') || '[]');
+        if (!history[idx]) return;
+
+        if (tx.value.trim() && !confirm('Replace current screen text with this archived note? (Cancel will append it instead)')) {
+            tx.value = tx.value.trim() + '\n\n' + history[idx].text;
+        } else {
+            tx.value = history[idx].text;
+        }
+        autoResize();
+        localStorage.setItem('vt_draft', tx.value);
+        toggleDrawer('history-drawer');
+        notify('Restored');
+    };
+
+    window.deleteHistoryItem = (e, idx) => {
+        e.stopPropagation();
+        const history = JSON.parse(localStorage.getItem('vt_history') || '[]');
+        history.splice(idx, 1);
+        localStorage.setItem('vt_history', JSON.stringify(history));
+        renderHistory();
+    };
+
+    /* ═══════════════════════════════════════════════
+       PERSISTENCE & KEYBOARD SHORTCUTS
+    ═══════════════════════════════════════════════ */
+    tx.addEventListener('input', () => {
+        autoResize();
+        localStorage.setItem('vt_draft', tx.value);
+        notify('Saved');
+    });
+
+    speedRange.addEventListener('input', () => {
+        speedDisplay.textContent = speedRange.value;
+        localStorage.setItem('vt_speed', speedRange.value);
+    });
+
+    voiceSelect.addEventListener('change', () => {
+        localStorage.setItem('vt_voice_idx', voiceSelect.value);
+    });
+
+    micLangSelect.addEventListener('change', () => {
+        localStorage.setItem('vt_mic_lang', micLangSelect.value);
+        if (recognition) {
+            recognition.lang = micLangSelect.value;
+            if (micActive) { stopMic(); setTimeout(startMic, 150); }
+        }
+    });
+
+    voiceCommandsToggle.addEventListener('change', () => {
+        localStorage.setItem('vt_voice_cmds', voiceCommandsToggle.checked ? '1' : '0');
+    });
+
+    webhookInput.addEventListener('input', () => {
+        const val = webhookInput.value.trim();
+        localStorage.setItem('vt_webhook', val);
+        webhookBtn.style.display = val ? 'inline-block' : 'none';
+    });
+
+    // Keyboard shortcuts: Alt+M (Mic), Alt+P (Play/Pause TTS)
+    window.addEventListener('keydown', (e) => {
+        if (e.altKey && e.code === 'KeyM') {
+            e.preventDefault();
+            micBtn.click();
+        } else if (e.altKey && e.code === 'KeyP') {
+            e.preventDefault();
+            speakBtn.click();
+        }
+    });
+
+    /* ═══════════════════════════════════════════════
+       INIT
+    ═══════════════════════════════════════════════ */
+    window.addEventListener('load', () => {
+        tx.value = localStorage.getItem('vt_draft') || '';
+        autoResize();
+
+        const speed = localStorage.getItem('vt_speed') || '1.0';
+        speedRange.value = speed;
+        speedDisplay.textContent = speed;
+
+        const savedLang = localStorage.getItem('vt_mic_lang') || 'en-US';
+        micLangSelect.value = savedLang;
+
+        const savedCmds = localStorage.getItem('vt_voice_cmds');
+        if (savedCmds !== null) voiceCommandsToggle.checked = savedCmds === '1';
+
+        const savedWebhook = localStorage.getItem('vt_webhook') || '';
+        webhookInput.value = savedWebhook;
+        if (savedWebhook) webhookBtn.style.display = 'inline-block';
+
+        setTimeout(loadVoices, 300);
+    });
+</script>
+</body>
+</html>
