@@ -6,348 +6,149 @@
     <title>Vanilla Text | Zen Mode</title>
     <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Poppins:wght@500;600&display=swap" rel="stylesheet">
     <style>
-        *, *::before, *::after {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
-            --text-dark: #141413;
-            --text-light: #faf9f5;
-            --bg-light: #faf9f5;
-            --bg-dark: #141413;
-            --secondary: #8e8c84;
-            --subtle-bg: #e8e6dc;
-            --accent-orange: #d97757;
-            --accent-blue: #6a9bcc;
-            --accent-green: #788c5d;
-            --accent-purple: #8c6d9c;
-            --btn-inactive: #5a6b7c;
-
-            --current-bg: var(--bg-light);
-            --current-text: var(--text-dark);
-            --border: var(--subtle-bg);
-            --hud-bg: rgba(20, 20, 19, 0.92);
-            --hud-text: #faf9f5;
-            --dock-bg: rgba(255, 255, 255, 0.85);
+            --text-dark: #141413; --text-light: #faf9f5;
+            --bg-light: #faf9f5; --bg-dark: #141413;
+            --secondary: #8e8c84; --subtle-bg: #e8e6dc;
+            --accent-orange: #d97757; --accent-blue: #6a9bcc;
+            --accent-green: #788c5d; --accent-purple: #8c6d9c;
+            --current-bg: var(--bg-light); --current-text: var(--text-dark);
+            --border: var(--subtle-bg); --hud-bg: rgba(20, 20, 19, 0.92);
+            --hud-text: #faf9f5; --dock-bg: rgba(255, 255, 255, 0.85);
         }
 
         @media (prefers-color-scheme: dark) {
             :root {
-                --current-bg: var(--bg-dark);
-                --current-text: var(--text-light);
-                --border: #2d2d2b;
-                --hud-bg: rgba(250, 249, 245, 0.94);
-                --hud-text: #141413;
-                --dock-bg: rgba(28, 28, 27, 0.85);
+                --current-bg: var(--bg-dark); --current-text: var(--text-light);
+                --border: #2d2d2b; --hud-bg: rgba(250, 249, 245, 0.94);
+                --hud-text: #141413; --dock-bg: rgba(28, 28, 27, 0.85);
             }
         }
 
-        /* ── Layout Shell ─────────────────────────────────── */
         html, body {
-            height: 100%;
-            overflow: hidden; 
-            background-color: var(--current-bg);
-            font-family: 'Lora', Georgia, serif;
-            color: var(--current-text);
-            font-size: 16px;
+            height: 100%; overflow: hidden; background-color: var(--current-bg);
+            font-family: 'Lora', Georgia, serif; color: var(--current-text); font-size: 16px;
         }
 
         /* Top Navigation Bar */
         #top-bar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 60px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 32px;
-            z-index: 100;
+            position: fixed; top: 0; left: 0; right: 0; height: 60px;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 32px; z-index: 100;
             background: linear-gradient(to bottom, var(--current-bg) 60%, transparent);
         }
-
-        #nav-left, #nav-right {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-        }
-
+        #nav-left, #nav-right { display: flex; gap: 20px; align-items: center; }
         .nav-btn {
-            background: none;
-            border: none;
-            color: var(--secondary);
-            font-family: 'Poppins', sans-serif;
-            font-weight: 600;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            cursor: pointer;
-            transition: color 0.2s;
+            background: none; border: none; color: var(--secondary);
+            font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 0.75rem;
+            text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer; transition: color 0.2s;
         }
-        
         .nav-btn:hover { color: var(--accent-orange); }
-
-        #word-count {
-            font-family: 'Poppins', sans-serif;
-            font-size: 0.75rem;
-            color: var(--secondary);
-        }
-
+        #word-count { font-family: 'Poppins', sans-serif; font-size: 0.75rem; color: var(--secondary); }
         #sync-status {
-            font-family: 'Poppins', sans-serif;
-            font-weight: 600;
-            font-size: 0.75rem;
-            color: var(--accent-green);
-            opacity: 0;
-            transition: opacity 0.2s;
-            margin-right: 10px;
+            font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 0.75rem;
+            color: var(--accent-green); opacity: 0; transition: opacity 0.2s; margin-right: 10px;
         }
 
         /* The Writing Canvas */
-        #app {
-            display: flex;
-            justify-content: center;
-            height: 100vh;
-            padding: 80px 24px 120px 24px; /* Room for top/bottom bars */
-        }
-
+        #app { display: flex; justify-content: center; height: 100vh; padding: 80px 24px 120px 24px; }
         #main-text {
-            width: 100%;
-            max-width: 760px; /* Perfect reading width */
-            height: 100%;
-            border: none;
-            outline: none;
-            background: transparent;
-            resize: none;
-            overflow-y: auto;
-            font-size: 1.25rem;
-            line-height: 1.8;
-            color: var(--current-text);
-            font-family: 'Lora', Georgia, serif;
-            scrollbar-width: none; /* Hide scrollbar for zen feel */
+            width: 100%; max-width: 760px; height: 100%; border: none; outline: none;
+            background: transparent; resize: none; overflow-y: auto;
+            font-size: 1.25rem; line-height: 1.8; color: var(--current-text);
+            font-family: 'Lora', Georgia, serif; scrollbar-width: none;
         }
         #main-text::-webkit-scrollbar { display: none; }
+        #main-text::placeholder { color: var(--secondary); opacity: 0.4; }
 
-        #main-text::placeholder {
-            color: var(--secondary);
-            opacity: 0.4;
-        }
-
-        /* ── The Floating Dock ───────────────────────── */
+        /* The Floating Dock */
         #control-dock {
-            position: fixed;
-            bottom: 32px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            background: var(--dock-bg);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            padding: 10px 20px;
-            border-radius: 999px;
-            border: 1px solid var(--border);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            z-index: 100;
+            position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%);
+            display: flex; align-items: center; gap: 12px;
+            background: var(--dock-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            padding: 10px 20px; border-radius: 999px; border: 1px solid var(--border);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1); z-index: 100;
         }
 
         .btn {
-            color: #fff;
-            border-radius: 50%;
-            border: none;
-            cursor: pointer;
-            transition: transform 0.15s ease, filter 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            color: #fff; border-radius: 50%; border: none; cursor: pointer;
+            transition: transform 0.15s ease, filter 0.2s; display: flex; align-items: center; justify-content: center;
         }
-
         .btn:active { transform: scale(0.9); }
         .btn:hover { filter: brightness(1.1); }
-
-        /* Small secondary buttons */
-        .btn-sm {
-            width: 38px;
-            height: 38px;
-            background: var(--border);
-            color: var(--current-text);
-            opacity: 0.7;
-        }
+        .btn-sm { width: 38px; height: 38px; background: var(--border); color: var(--current-text); opacity: 0.7; }
         .btn-sm:hover { opacity: 1; }
-
-        /* The Main Mic Button */
-        .btn-mic {
-            width: 56px;
-            height: 56px;
-            background: var(--accent-orange);
-            margin: 0 8px;
-        }
-
-        /* Accent colors for hover */
+        .btn-mic { width: 56px; height: 56px; background: var(--accent-orange); margin: 0 8px; }
         .btn-copy:hover { color: var(--accent-blue); }
         .btn-speak:hover { color: var(--accent-green); }
         .btn-archive:hover { color: var(--accent-purple); }
 
-        /* ── Animations ── */
         @keyframes pulse-orange {
-            0%   { box-shadow: 0 0 0 0   rgba(217,119,87,0.6); }
-            70%  { box-shadow: 0 0 0 16px rgba(217,119,87,0); }
-            100% { box-shadow: 0 0 0 0   rgba(217,119,87,0); }
+            0% { box-shadow: 0 0 0 0 rgba(217,119,87,0.6); }
+            70% { box-shadow: 0 0 0 16px rgba(217,119,87,0); }
+            100% { box-shadow: 0 0 0 0 rgba(217,119,87,0); }
         }
         .mic-live { animation: pulse-orange 1.2s infinite; }
 
-        /* ── Live Interim HUD ── */
+        /* Live Interim HUD */
         #live-hud {
-            position: fixed;
-            bottom: 110px;
-            left: 50%;
-            transform: translateX(-50%) translateY(10px);
-            background: var(--hud-bg);
-            color: var(--hud-text);
-            padding: 10px 20px;
-            border-radius: 999px;
-            font-family: 'Poppins', sans-serif;
-            font-size: 0.85rem;
-            font-weight: 500;
-            max-width: 80vw;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.18);
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s ease, transform 0.2s ease;
-            z-index: 105;
+            position: fixed; bottom: 110px; left: 50%; transform: translateX(-50%) translateY(10px);
+            background: var(--hud-bg); color: var(--hud-text); padding: 10px 20px; border-radius: 999px;
+            font-family: 'Poppins', sans-serif; font-size: 0.85rem; font-weight: 500; max-width: 80vw;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.18); opacity: 0; pointer-events: none;
+            transition: opacity 0.2s ease, transform 0.2s ease; z-index: 105;
         }
-
-        #live-hud.visible {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-        }
-
+        #live-hud.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
         #live-hud .hud-dot {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            background: var(--accent-orange);
-            border-radius: 50%;
-            margin-right: 10px;
-            vertical-align: middle;
+            display: inline-block; width: 8px; height: 8px; background: var(--accent-orange);
+            border-radius: 50%; margin-right: 10px; vertical-align: middle;
         }
 
-        /* ── Drawers (Settings & Archive) ── */
+        /* Drawers */
         .drawer-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.4);
-            backdrop-filter: blur(4px);
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s ease;
-            z-index: 200;
+            position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px);
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease; z-index: 200;
         }
-        .drawer-overlay.open {
-            opacity: 1;
-            pointer-events: auto;
-        }
+        .drawer-overlay.open { opacity: 1; pointer-events: auto; }
 
         .drawer {
-            position: fixed;
-            top: 0;
-            right: -400px;
-            bottom: 0;
-            width: 400px;
-            max-width: 100vw;
-            background: var(--current-bg);
-            border-left: 1px solid var(--border);
-            box-shadow: -10px 0 30px rgba(0,0,0,0.1);
-            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: 201;
-            display: flex;
-            flex-direction: column;
-            padding: 32px;
-            overflow-y: auto;
+            position: fixed; top: 0; right: -400px; bottom: 0; width: 400px; max-width: 100vw;
+            background: var(--current-bg); border-left: 1px solid var(--border);
+            box-shadow: -10px 0 30px rgba(0,0,0,0.1); transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 201; display: flex; flex-direction: column; padding: 32px; overflow-y: auto;
         }
         .drawer.open { right: 0; }
+        .drawer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .drawer-title { font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 1rem; color: var(--current-text); }
+        .close-btn { background: none; border: none; font-size: 1.5rem; color: var(--secondary); cursor: pointer; }
 
-        .drawer-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
-        }
-        .drawer-title {
-            font-family: 'Poppins', sans-serif;
-            font-weight: 700;
-            font-size: 1rem;
-            color: var(--current-text);
-        }
-        .close-btn {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            color: var(--secondary);
-            cursor: pointer;
-        }
-
-        /* ── Settings Form ── */
         .settings-grid { display: flex; flex-direction: column; gap: 24px; }
         .settings-grid label {
-            font-family: 'Poppins', sans-serif;
-            font-weight: 600;
-            font-size: 0.7rem;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-            color: var(--secondary);
-            display: block;
-            margin-bottom: 8px;
+            font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 0.7rem;
+            letter-spacing: 0.05em; text-transform: uppercase; color: var(--secondary);
+            display: block; margin-bottom: 8px;
         }
         .settings-grid select, .settings-grid input[type="text"] {
-            width: 100%;
-            background: var(--bg-light);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 10px;
-            outline: none;
-            color: var(--current-text);
-            font-family: 'Poppins', sans-serif;
-            font-size: 0.9rem;
+            width: 100%; background: var(--bg-light); border: 1px solid var(--border);
+            border-radius: 8px; padding: 10px; outline: none; color: var(--current-text);
+            font-family: 'Poppins', sans-serif; font-size: 0.9rem;
         }
         @media (prefers-color-scheme: dark) {
             .settings-grid select, .settings-grid input[type="text"] { background: var(--bg-dark); }
         }
 
-        /* ── History List ── */
         .history-item {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            padding: 12px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            margin-bottom: 12px;
-            cursor: pointer;
-            transition: background 0.2s;
+            display: flex; flex-direction: column; gap: 4px; padding: 12px;
+            border: 1px solid var(--border); border-radius: 8px; margin-bottom: 12px;
+            cursor: pointer; transition: background 0.2s;
         }
         .history-item:hover { background: rgba(128,128,128,0.05); }
-        .history-item .time-tag {
-            font-family: 'Poppins', sans-serif;
-            font-size: 0.65rem;
-            color: var(--accent-blue);
-        }
-        .history-item .snippet {
-            font-size: 0.85rem;
-            opacity: 0.8;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        
-        /* Mobile adjustments */
+        .history-item .time-tag { font-family: 'Poppins', sans-serif; font-size: 0.65rem; color: var(--accent-blue); }
+        .history-item .snippet { font-size: 0.85rem; opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
         @media (max-width: 768px) {
             #app { padding: 60px 16px 120px 16px; }
             #top-bar { padding: 0 16px; }
@@ -360,7 +161,6 @@
 </head>
 <body>
 
-<!-- Top Navigation -->
 <div id="top-bar">
     <div id="nav-left">
         <button class="nav-btn" onclick="toggleDrawer('settings-drawer')">Settings</button>
@@ -372,41 +172,32 @@
     </div>
 </div>
 
-<!-- The Canvas -->
 <div id="app">
     <textarea id="main-text" placeholder="Tap the orange mic or start typing..."></textarea>
 </div>
 
-<!-- Live Dictation HUD -->
 <div id="live-hud"><span class="hud-dot"></span><span id="hud-text">Listening...</span></div>
 
-<!-- The Floating Dock -->
 <div id="control-dock">
     <button id="archive-btn" class="btn btn-sm btn-archive" title="Archive & Clear">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
     </button>
-    
     <button id="copy-btn" class="btn btn-sm btn-copy" title="Copy to Clipboard">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
     </button>
-
     <button id="mic-btn" class="btn btn-mic" title="Toggle Voice Dictation (Alt+M)">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
     </button>
-
-    <button id="speak-btn" class="btn btn-sm btn-speak" title="Read Aloud (Alt+P)">
+    <button id="speak-btn" class="btn btn-sm btn-speak" title="Read Aloud (Alt+P) — Reads selection or full text">
         <svg id="speak-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
     </button>
-
     <button id="clear-btn" class="btn btn-sm btn-clear" title="Clear Draft">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
     </button>
 </div>
 
-<!-- Drawer Overlay -->
 <div id="drawer-overlay" class="drawer-overlay" onclick="closeAllDrawers()"></div>
 
-<!-- Settings Drawer -->
 <div id="settings-drawer" class="drawer">
     <div class="drawer-header">
         <span class="drawer-title">Settings</span>
@@ -441,7 +232,6 @@
     </div>
 </div>
 
-<!-- Archive Drawer -->
 <div id="history-drawer" class="drawer">
     <div class="drawer-header">
         <span class="drawer-title">Archive</span>
@@ -487,6 +277,10 @@
     // --- SPEECH SYNTHESIS (Read Aloud) ---
     const synth = window.speechSynthesis;
     let voices = [];
+    
+    // Robust TTS State Tracking
+    let isTtsSpeaking = false;
+    let isTtsPaused = false;
     let ttsKeepAliveTimer = null;
 
     function loadVoices() {
@@ -501,35 +295,63 @@
 
     function resetSpeakUI() {
         clearInterval(ttsKeepAliveTimer);
-        speakBtn.classList.remove('speaking');
+        isTtsSpeaking = false;
+        isTtsPaused = false;
         speakIcon.innerHTML = ICONS.PLAY;
     }
 
     speakBtn.addEventListener('click', () => {
-        if (synth.speaking && !synth.paused) {
-            synth.pause();
-            speakIcon.innerHTML = ICONS.PLAY;
-        } else if (synth.paused) {
-            synth.resume();
-            speakIcon.innerHTML = ICONS.PAUSE;
-        } else {
-            synth.cancel();
-            const textToRead = tx.value.trim();
-            if (!textToRead) return;
-
-            const utt = new SpeechSynthesisUtterance(textToRead);
-            utt.voice = voices[voiceSelect.value] || null;
-            utt.rate = parseFloat(speedRange.value);
-
-            utt.onstart = () => {
+        // 1. If currently speaking, handle Pause/Resume
+        if (isTtsSpeaking) {
+            if (!isTtsPaused) {
+                // Pause it
+                synth.pause();
+                isTtsPaused = true;
+                speakIcon.innerHTML = ICONS.PLAY;
+            } else {
+                // Resume it
+                synth.resume();
+                isTtsPaused = false;
                 speakIcon.innerHTML = ICONS.PAUSE;
-                ttsKeepAliveTimer = setInterval(() => {
-                    if (synth.speaking && !synth.paused) { synth.pause(); synth.resume(); }
-                }, 10000);
-            };
-            utt.onend = utt.onerror = resetSpeakUI;
-            synth.speak(utt);
+            }
+            return;
         }
+
+        // 2. If not speaking, start fresh
+        synth.cancel(); // Clear any zombie utterances
+        
+        // Check for highlighted text selection first
+        const selStart = tx.selectionStart;
+        const selEnd = tx.selectionEnd;
+        const selectedText = (selStart !== selEnd) ? tx.value.substring(selStart, selEnd).trim() : '';
+        const textToRead = selectedText.length > 0 ? selectedText : tx.value.trim();
+
+        if (!textToRead) return;
+
+        const utt = new SpeechSynthesisUtterance(textToRead);
+        utt.voice = voices[voiceSelect.value] || null;
+        utt.rate = parseFloat(speedRange.value);
+
+        utt.onstart = () => {
+            isTtsSpeaking = true;
+            isTtsPaused = false;
+            speakIcon.innerHTML = ICONS.PAUSE;
+            
+            // Chrome 15-second cutoff workaround (only fires if not paused)
+            clearInterval(ttsKeepAliveTimer);
+            ttsKeepAliveTimer = setInterval(() => {
+                if (isTtsSpeaking && !isTtsPaused) {
+                    synth.pause();
+                    synth.resume();
+                }
+            }, 10000);
+        };
+
+        utt.onend = utt.onerror = () => {
+            resetSpeakUI();
+        };
+
+        synth.speak(utt);
     });
 
     // --- VOICE INPUT (Dictation) ---
@@ -597,7 +419,8 @@
 
     function startMic() {
         if (!recognition) return alert('Use Chrome, Edge, or Safari for dictation.');
-        if (synth.speaking) { synth.cancel(); resetSpeakUI(); }
+        if (isTtsSpeaking) { synth.cancel(); resetSpeakUI(); } // stop TTS if reading
+        
         recognition.lang = micLangSelect.value;
         micActive = true;
         try { recognition.start(); } catch (e) {}
@@ -645,7 +468,6 @@
         if (confirm('Discard draft?')) { tx.value = ''; localStorage.setItem('vt_draft', ''); updateStats(); }
     });
 
-    // Drawers
     window.toggleDrawer = (id) => {
         const target = document.getElementById(id);
         const overlay = document.getElementById('drawer-overlay');
