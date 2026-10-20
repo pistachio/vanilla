@@ -282,6 +282,7 @@
     let isTtsSpeaking = false;
     let isTtsPaused = false;
     let ttsKeepAliveTimer = null;
+    let currentlyPlayingText = ''; // Track what is actually playing
 
     function loadVoices() {
         voices = synth.getVoices();
@@ -297,36 +298,14 @@
         clearInterval(ttsKeepAliveTimer);
         isTtsSpeaking = false;
         isTtsPaused = false;
+        currentlyPlayingText = '';
         speakIcon.innerHTML = ICONS.PLAY;
     }
 
-    speakBtn.addEventListener('click', () => {
-        // 1. If currently speaking, handle Pause/Resume
-        if (isTtsSpeaking) {
-            if (!isTtsPaused) {
-                // Pause it
-                synth.pause();
-                isTtsPaused = true;
-                speakIcon.innerHTML = ICONS.PLAY;
-            } else {
-                // Resume it
-                synth.resume();
-                isTtsPaused = false;
-                speakIcon.innerHTML = ICONS.PAUSE;
-            }
-            return;
-        }
-
-        // 2. If not speaking, start fresh
-        synth.cancel(); // Clear any zombie utterances
-        
-        // Check for highlighted text selection first
-        const selStart = tx.selectionStart;
-        const selEnd = tx.selectionEnd;
-        const selectedText = (selStart !== selEnd) ? tx.value.substring(selStart, selEnd).trim() : '';
-        const textToRead = selectedText.length > 0 ? selectedText : tx.value.trim();
-
+    function startTts(textToRead) {
         if (!textToRead) return;
+        
+        currentlyPlayingText = textToRead;
 
         const utt = new SpeechSynthesisUtterance(textToRead);
         utt.voice = voices[voiceSelect.value] || null;
@@ -337,7 +316,6 @@
             isTtsPaused = false;
             speakIcon.innerHTML = ICONS.PAUSE;
             
-            // Chrome 15-second cutoff workaround (only fires if not paused)
             clearInterval(ttsKeepAliveTimer);
             ttsKeepAliveTimer = setInterval(() => {
                 if (isTtsSpeaking && !isTtsPaused) {
@@ -347,11 +325,43 @@
             }, 10000);
         };
 
-        utt.onend = utt.onerror = () => {
-            resetSpeakUI();
-        };
-
+        utt.onend = utt.onerror = () => resetSpeakUI();
         synth.speak(utt);
+    }
+
+    speakBtn.addEventListener('click', () => {
+        // Get current text (Highlighted or full document)
+        const selStart = tx.selectionStart;
+        const selEnd = tx.selectionEnd;
+        const selectedText = (selStart !== selEnd) ? tx.value.substring(selStart, selEnd).trim() : '';
+        const currentSelection = selectedText.length > 0 ? selectedText : tx.value.trim();
+
+        if (isTtsSpeaking) {
+            if (!isTtsPaused) {
+                // --- ACTION: PAUSE ---
+                synth.pause();
+                isTtsPaused = true;
+                speakIcon.innerHTML = ICONS.PLAY;
+            } else {
+                // --- ACTION: RESUME or RESTART ---
+                // If the user changed their selection while paused, do a full stop and read the new text.
+                if (currentSelection !== currentlyPlayingText) {
+                    synth.cancel(); // Kill the old queue
+                    resetSpeakUI();
+                    startTts(currentSelection); // Start fresh
+                } else {
+                    // Resume the same text
+                    synth.resume();
+                    isTtsPaused = false;
+                    speakIcon.innerHTML = ICONS.PAUSE;
+                }
+            }
+            return;
+        }
+
+        // --- ACTION: START FRESH ---
+        synth.cancel(); 
+        startTts(currentSelection);
     });
 
     // --- VOICE INPUT (Dictation) ---
