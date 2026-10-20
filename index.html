@@ -46,6 +46,8 @@
         /* ── Layout Shell ─────────────────────────────────── */
         html, body {
             height: 100%;
+            /* This prevents the whole browser window from scrolling */
+            overflow: hidden; 
             background-color: var(--current-bg);
             font-family: 'Lora', Georgia, serif;
             color: var(--current-text);
@@ -55,8 +57,9 @@
         #app {
             display: flex;
             justify-content: center;
-            padding: 40px 104px 120px 24px;
-            min-height: 100vh;
+            /* Adjusting padding to account for the fixed footer and side buttons */
+            padding: 32px 104px 88px 24px; 
+            height: 100vh;
         }
 
         /* ── Textarea Container ────────────────────────────── */
@@ -67,7 +70,7 @@
             border-radius: 20px;
             width: 100%;
             max-width: 860px;
-            min-height: calc(100vh - 160px);
+            height: 100%; /* Takes up the available height */
             display: flex;
             flex-direction: column;
             transition: border-color 0.25s ease, box-shadow 0.25s ease;
@@ -81,18 +84,27 @@
         #main-text {
             display: block;
             width: 100%;
-            flex: 1;
+            height: 100%;
             border: none;
             outline: none;
             background: transparent;
             resize: none;
-            overflow: hidden;
+            /* THIS IS THE KEY FIX: It scrolls internally now */
+            overflow-y: auto; 
             font-size: 1.25rem;
             line-height: 1.75;
             padding: 40px;
             color: var(--current-text);
             font-family: 'Lora', Georgia, serif;
-            min-height: 400px;
+            scrollbar-width: thin;
+        }
+
+        /* Custom scrollbar for webkit (Chrome/Safari) */
+        #main-text::-webkit-scrollbar { width: 8px; }
+        #main-text::-webkit-scrollbar-track { background: transparent; }
+        #main-text::-webkit-scrollbar-thumb {
+            background-color: var(--border);
+            border-radius: 10px;
         }
 
         #main-text::placeholder {
@@ -577,13 +589,8 @@
         PAUSE: `<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>`
     };
 
-    function autoResize() {
-        const scrollPos = window.scrollY;
-        tx.style.height = 'auto';
-        tx.style.height = Math.max(400, tx.scrollHeight) + 'px';
-        window.scrollTo(0, scrollPos);
-        updateStats();
-    }
+    /* NOTE: The autoResize() function has been completely removed.
+       Native scrolling is now handled purely by CSS! */
 
     function updateStats() {
         const text = tx.value.trim();
@@ -640,7 +647,6 @@
             speakIcon.innerHTML = ICONS.PAUSE;
         } else {
             synth.cancel();
-            // Accurate textarea selection detection
             const selStart = tx.selectionStart;
             const selEnd   = tx.selectionEnd;
             const selectedText = (selStart !== selEnd) ? tx.value.substring(selStart, selEnd).trim() : '';
@@ -655,7 +661,6 @@
             utt.onstart = () => {
                 speakBtn.classList.add('speaking');
                 speakIcon.innerHTML = ICONS.PAUSE;
-                // Workaround for Chrome cutting off long TTS after 15 seconds
                 ttsKeepAliveTimer = setInterval(() => {
                     if (synth.speaking && !synth.paused) {
                         synth.pause();
@@ -703,12 +708,10 @@
             }
         }
 
-        // Clean up spaces before punctuation
         text = text.replace(/\s+([.,?!:;])/g, '$1');
         text = text.trim();
         if (!text) return '';
 
-        // Smart spacing & capitalization relative to preceding text
         const needsLeadingSpace = precedingChar && !/[\s\n"(-]/.test(precedingChar) && !/^[.,?!:;\n]/.test(text);
         const shouldCapitalize  = !precedingChar || /[.?!\n]\s*$/.test(precedingChar) || /-\s*$/.test(precedingChar);
 
@@ -716,7 +719,6 @@
             text = text.charAt(0).toUpperCase() + text.slice(1);
         }
 
-        // Auto-capitalize after internal newlines or periods
         text = text.replace(/([.?!\n]\s+)([a-z])/g, (m, p1, p2) => p1 + p2.toUpperCase());
 
         const trailingSpace = /\n$/.test(text) ? '' : ' ';
@@ -736,6 +738,9 @@
         const newPos = before.length + formatted.length;
         tx.setSelectionRange(newPos, newPos);
         tx.dispatchEvent(new Event('input'));
+        
+        /* Auto-scroll to cursor when dictating */
+        tx.scrollTop = tx.scrollHeight;
     }
 
     if (SpeechRecognition) {
@@ -804,7 +809,6 @@
             alert('Speech recognition is not supported in this browser. Use Chrome, Edge, or Safari.');
             return;
         }
-        // Stop TTS if speaking
         if (synth.speaking) { synth.cancel(); resetSpeakUI(); }
 
         recognition.lang = micLangSelect.value;
@@ -842,27 +846,24 @@
         localStorage.setItem('vt_history', JSON.stringify(history.slice(0, 50)));
     }
 
-    // Standard Copy (keeps text in editor)
     document.getElementById('copy-btn').addEventListener('click', () => {
         const text = tx.value.trim();
         if (!text) return;
         navigator.clipboard.writeText(text).then(() => notify('Copied to Clipboard'));
     });
 
-    // Smart Archive (Copies + Saves to Archive + Clears screen for next note)
     document.getElementById('archive-btn').addEventListener('click', () => {
         const text = tx.value.trim();
         if (!text) return;
         navigator.clipboard.writeText(text).catch(() => {});
         saveToHistory(text);
         tx.value = '';
-        autoResize();
+        updateStats();
         localStorage.setItem('vt_draft', '');
         if (document.getElementById('history-drawer').classList.contains('open')) renderHistory();
         notify('Copied & Archived');
     });
 
-    // Download as Markdown file
     document.getElementById('download-btn').addEventListener('click', () => {
         const text = tx.value.trim();
         if (!text) return;
@@ -877,19 +878,17 @@
         notify('Downloaded .md');
     });
 
-    // Clear Draft
     document.getElementById('clear-btn').addEventListener('click', () => {
         const text = tx.value.trim();
         if (!text) return;
         if (confirm('Discard current draft? (Tip: Use the purple Archive button to save it first)')) {
             tx.value = '';
-            autoResize();
+            updateStats();
             localStorage.setItem('vt_draft', '');
             notify('Cleared');
         }
     });
 
-    // Optional Webhook Push
     async function sendWebhook() {
         const url = webhookInput.value.trim();
         const text = tx.value.trim();
@@ -955,7 +954,7 @@
         } else {
             tx.value = history[idx].text;
         }
-        autoResize();
+        updateStats();
         localStorage.setItem('vt_draft', tx.value);
         toggleDrawer('history-drawer');
         notify('Restored');
@@ -973,7 +972,7 @@
        PERSISTENCE & KEYBOARD SHORTCUTS
     ═══════════════════════════════════════════════ */
     tx.addEventListener('input', () => {
-        autoResize();
+        updateStats();
         localStorage.setItem('vt_draft', tx.value);
         notify('Saved');
     });
@@ -1005,7 +1004,6 @@
         webhookBtn.style.display = val ? 'inline-block' : 'none';
     });
 
-    // Keyboard shortcuts: Alt+M (Mic), Alt+P (Play/Pause TTS)
     window.addEventListener('keydown', (e) => {
         if (e.altKey && e.code === 'KeyM') {
             e.preventDefault();
@@ -1021,7 +1019,7 @@
     ═══════════════════════════════════════════════ */
     window.addEventListener('load', () => {
         tx.value = localStorage.getItem('vt_draft') || '';
-        autoResize();
+        updateStats();
 
         const speed = localStorage.getItem('vt_speed') || '1.0';
         speedRange.value = speed;
